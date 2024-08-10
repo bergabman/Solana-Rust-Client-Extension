@@ -5,6 +5,11 @@ use solana_sdk::{
     transaction::Transaction,
 };
 mod error;
+
+/// # RpcClientExt
+///
+/// `RpcClientExt` is an extension trait for the rust solana client.
+/// This crate provides extensions for the Solana Rust client, focusing on compute unit estimation and optimization.
 pub trait RpcClientExt {
     fn estimate_compute_units_unsigned_tx<'a, I: Signers + ?Sized>(
         &self,
@@ -107,10 +112,43 @@ impl RpcClientExt for solana_client::rpc_client::RpcClient {
         Ok(optimal_cu)
     }
 
-    /// Calculates the optimal compute units for the transaction
+    /// Simulates the transaction to get compute units used for the transaction
     /// and adds an instruction to the message to request
-    /// only for the required compute units from the ComputeBudget program
+    /// only the required compute units from the ComputeBudget program
     /// to complete the transaction with this Message.
+    /// 
+    /// ```
+    /// use solana_client::rpc_client::RpcClient;
+    /// use solana_client_ext::RpcClientExt;
+    /// use solana_sdk::{
+    ///     message::Message, signature::read_keypair_file, signer::Signer, system_instruction,
+    ///     transaction::Transaction,
+    /// };
+    /// fn main() {
+    ///     let rpc_client = RpcClient::new("https://api.devnet.solana.com");
+    ///     let keypair = read_keypair_file("~/.config/solana/id.json").unwrap();
+    ///     let keypair2 = read_keypair_file("~/.config/solana/_id.json").unwrap();
+    ///     let created_ix = system_instruction::transfer(&keypair.pubkey(), &keypair2.pubkey(), 10000);
+    ///     let mut msg = Message::new(&[created_ix], Some(&keypair.pubkey()));
+    ///
+    ///     let optimized_cu = rpc_client
+    ///         .optimize_compute_units_msg(&mut msg, &[&keypair])
+    ///         .unwrap();
+    ///     println!("optimized cu {}", optimized_cu);
+    ///
+    ///     let tx = Transaction::new(&[keypair], msg, rpc_client.get_latest_blockhash().unwrap());
+    ///     let result = rpc_client
+    ///         .send_and_confirm_transaction_with_spinner(&tx)
+    ///         .unwrap();
+    ///
+    ///     println!(
+    ///         "sig https://explorer.solana.com/tx/{}?cluster=devnet",
+    ///         result
+    ///     );
+    /// }
+    /// 
+    /// 
+    /// ```
     fn optimize_compute_units_msg<'a, I: Signers + ?Sized>(
         &self,
         message: &mut Message,
