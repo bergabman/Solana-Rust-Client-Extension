@@ -44,3 +44,5 @@ fn main() {
         result
     );
 }
+```
+[tx](img/optimized_compute.png)
